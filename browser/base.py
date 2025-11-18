@@ -209,30 +209,13 @@ class Session:
         """
             Проверяет валидность данных аккаунта: авторизационные данные.
         """
-        if not await self._check_cookie_validness():
-            await notify_user(
-                self.account.owner.id,
-                f"{ERROR_SIGN} Cookie невалидны! Попытка авторизации с логин/пароль ...")
-            if not self.account.username or not self.account.password:
-                await notify_user(
-                self.account.owner.id,
-                f"{ERROR_SIGN} Данные для входа в аккаунт отсутсвуют!"
-                )
-                return False
-            try:
-                if await self._set_cookie():
-                    await notify_user(
-                        self.account.owner.id,
-                        f"{SUCCESS_SIGN} Авторизация прошла успешно, cookie записаны в хранилище!")
-            except CustomExceptions.LoginCredentialsInvalid:
-                await notify_user(
-                    self.account.owner.id,
-                    f"{ERROR_SIGN} Данные для входа неверны!")
-                await ThreadsManager.close_session(
-                    account_id=self.account.id,
-                )
-                return False
-        return True
+        if self.account.cookies:
+            if await self._check_cookie_validness():
+                return True
+            else:
+                raise CustomExceptions.CookieInvalid
+        else:
+            raise CustomExceptions.NoCookiesProvided
 
     async def _schedule_posts(self, schedule: Schedule):
         """
@@ -398,6 +381,24 @@ class Session:
                     f"{self.account.id} account's cookie is invalid!"
                 )
                 return False
+            new_post_button = page.locator(
+                'div[id="barcelona-page-layout"] div div div[role="region"][tabindex="0"] div div[style="--x-paddingInline: var(--barcelona-columns-item-horizontal-padding);"] div div[role="button"][tabindex="0"]',
+            ).first
+
+            if not new_post_button:
+                browser_logger.error(
+                    f"{self.account.id} account's cookie is invalid!"
+                )
+                return False
+            
+            try:
+                await new_post_button.wait_for(state="visible", timeout=15000)
+            except _errors.TimeoutError:
+                browser_logger.error(
+                    f"{self.account.id} account's cookie is invalid!"
+                )
+                return False
+            
             browser_logger.info(
                 f"{self.account.id} account's cookie is valid!"
             )
@@ -435,8 +436,10 @@ class Session:
             await password_input.fill(self.account.password)
 
             try:
-                async with page.expect_navigation(timeout=60000):
+                async with page.expect_navigation(timeout=25000):
                     await submit_btn.click()
+                    await asyncio.sleep(10)
+                await page.wait_for_load_state("load")
                 if "login" in page.url.lower():
                     browser_logger.error(
                         f"{self.account.id} account's login credentials are invalid!"
@@ -536,13 +539,8 @@ class Session:
                             
                             final_post_button = (await final_post_button.all())[8]
 
-                            # for idx, item in enumerate(await final_post_button.all()):
-                            #     html = await item.evaluate("(el) => el.outerHTML")
-                            #     print(f"{idx} {html}")
-
-                            # input()
-
                             await final_post_button.click()
+
                             await asyncio.sleep(random.uniform(5, 8))
                         
                     await asyncio.sleep(self.account.scroll_feed_delay)
@@ -647,7 +645,12 @@ class Session:
             final_post_button = page.locator(
                 'div[role="dialog"] div[aria-hidden="false"] div div div div div div[role="button"][tabindex="0"] div'
             )
-            final_post_button = (await final_post_button.all())[9]
+            final_post_button = (await final_post_button.all())[5]
+
+            # for idx, btn in enumerate(await final_post_button.all()):
+            #     html = await btn.evaluate("(el) => el.outerHTML")
+            #     print(f'{idx} {html}')
+            # input("Press Enter to continue...")
             
             if not final_post_button:
                 return False
@@ -685,13 +688,6 @@ class Session:
             like_locator = page.locator('div[role="button"][tabindex="0"] div div div[style="--x-width: 1ch;"]')
             
             items = await like_locator.all()
-
-            for item in items:
-                html = await item.evaluate("(el) => el.outerHTML")
-                print(html)
-
-
-            input('123')
         except Exception:
             browser_logger.error(
                 f"A error was occured while fetching stats for account {self.account.id}!\n" + traceback.format_exc()
@@ -780,6 +776,9 @@ class ThreadsManager:
             )
             session = cls.sessions.get(account.id, None)
             if session:
+                browser_logger.info(
+                    f"A session for account {account.id} already exists!"
+                )
                 return session
 
             session = Session(
@@ -787,9 +786,21 @@ class ThreadsManager:
             )
             cls.sessions[account.id] = session
             
-            if not await session._check_myslef():
-                await cls.close_session(account.id)
-                return
+            try:
+                await session._check_myslef()
+            except (CustomExceptions.CookieInvalid, CustomExceptions.NoCookiesProvided):
+                try:
+                    await session._set_cookie()
+                except CustomExceptions.LoginCredentialsInvalid:
+                    await notify_user(
+                        account.owner_id,
+                        f"{ERROR_SIGN} Неправильные логин или пароль для аккаунта {account.id}!"
+                    )
+                    browser_logger.error(
+                        f"Login credentials are invalid for account {account.id}!"
+                    )
+                    del cls.sessions[account.id]
+                    return None    
             
             if configure_scheduler:
                 await session._configure_scheduler()
@@ -837,9 +848,6 @@ class ThreadsManager:
 
             if not session:
                 return
-            
-            if not await session._check_myslef():
-                return
 
             async with async_session() as db_session:
                 account = await db_session.scalar(
@@ -861,7 +869,7 @@ class ThreadsManager:
             )
         except Exception:
             browser_logger.error(
-                f"A error was occured while refreshing data for account {account.id}!\n" + traceback.format_exc()
+                f"A error was occured while refreshing data for account {account_id}!\n" + traceback.format_exc()
             )
 
     @classmethod

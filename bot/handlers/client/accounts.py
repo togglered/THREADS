@@ -132,7 +132,6 @@ async def toggle_account_work(callback: types.CallbackQuery):
                 session = await ThreadsManager.create_session(
                     account=account,
                 )
-                await session._scroll_feeds()
             else:
                 await callback.answer()
                 await ThreadsManager.close_session(

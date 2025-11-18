@@ -1,20 +1,39 @@
+from dotenv import load_dotenv
 import asyncio
-from playwright.async_api import async_playwright
+
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
+load_dotenv()
+
+from bot.app import start_tg_bot
+from database.models import create_columns, async_session, Account
+from browser.base import ThreadsManager
 
 
 async def main():
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=False,
+    await create_columns()
+    await ThreadsManager.start_browser()
+    # await ThreadsManager.start_scheduler()
+
+    async with async_session() as session:
+        account = await session.scalar(
+            select(Account)
+            .where(Account.id == 2)
+            .options(
+                selectinload(Account.persona),
+                selectinload(Account.owner),
+                selectinload(Account.schedules),
+                selectinload(Account.medias),
+            )
         )
-        context = await browser.new_context(
-            ignore_https_errors=True
-        )
-        page = await context.new_page()
-        await page.goto("https://2ip.ru/")
-        print(await page.title())
-        input("Press Enter to close the browser...")
-        await browser.close()
+        if account:
+            session = await ThreadsManager.create_session(
+                account=account,
+            )
+            await session._scroll_feeds()
+            input("Press Enter to stop...")
+            await ThreadsManager.close_session(account_id=account.id)
 
 
 if __name__ == "__main__":
