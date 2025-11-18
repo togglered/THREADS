@@ -182,7 +182,7 @@ class Session:
                             next_run_time=end_dt
                         )
                         scheduler_logger.info(
-                            f"Account {self.account.id} got an end job at {start_dt.strftime('%d/%m/%Y, %H:%M:%S')}!"
+                            f"Account {self.account.id} got an end job at {end_dt.strftime('%d/%m/%Y, %H:%M:%S')}!"
                         )
                     if day_date == tomorrow_date:
                         tomorrows_sessions.append(schedule)
@@ -485,7 +485,7 @@ class Session:
             browser_logger.info(
                 f"Account {self.account.id} is now starting to scroll feed..."
             )
-            while True: # self.stop_work_event and not self.stop_work_event.is_set():
+            while self.stop_work_event and not self.stop_work_event.is_set():
                 await page.goto("https://www.threads.net/", wait_until="domcontentloaded", timeout=60000)
                 await asyncio.sleep(10)
 
@@ -496,7 +496,7 @@ class Session:
                 like_btns = await like_btns_locator.all()
 
                 for like_btn, comment_btn in zip(like_btns, comment_btns):
-                    if True: # self.stop_work_event and not self.stop_work_event.is_set():
+                    if self.stop_work_event and not self.stop_work_event.is_set():
                         await like_btn.scroll_into_view_if_needed()
                         if get_chance(self.account.like_chance):
                             # leave a like

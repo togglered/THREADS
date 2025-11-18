@@ -31,9 +31,8 @@ async def main():
             session = await ThreadsManager.create_session(
                 account=account,
             )
-            await session._scroll_feeds()
-            input("Press Enter to stop...")
-            await ThreadsManager.close_session(account_id=account.id)
+            await asyncio.Future()
+            
 
 
 if __name__ == "__main__":
