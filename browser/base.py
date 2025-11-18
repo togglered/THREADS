@@ -404,6 +404,13 @@ class Session:
             )
             return True
         except Exception:
+            os.makedirs("screenshots", exist_ok=True)
+
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            path = f"screenshots/error_{timestamp}.png"
+
+            await page.screenshot(path=path, full_page=True)
+
             browser_logger.error(
                 f"A error was occured while checking cookie validness for account {self.account.id}!\n" + traceback.format_exc()
             )
@@ -545,6 +552,13 @@ class Session:
                         
                     await asyncio.sleep(self.account.scroll_feed_delay)
         except Exception:
+            os.makedirs("screenshots", exist_ok=True)
+
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            path = f"screenshots/error_{timestamp}.png"
+
+            await page.screenshot(path=path, full_page=True)
+
             browser_logger.error(
                 f"A error was occured while scrolling feed for account {self.account.id}!\n" + traceback.format_exc()
             )
@@ -594,6 +608,13 @@ class Session:
 
             return True
         except Exception:
+            os.makedirs("screenshots", exist_ok=True)
+
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            path = f"screenshots/error_{timestamp}.png"
+
+            await page.screenshot(path=path, full_page=True)
+
             browser_logger.error(
                 f"A error was occured while creating text post for account {self.account.id}!\n" + traceback.format_exc()
             )
@@ -664,6 +685,13 @@ class Session:
 
             return True
         except Exception:
+            os.makedirs("screenshots", exist_ok=True)
+
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            path = f"screenshots/error_{timestamp}.png"
+
+            await page.screenshot(path=path, full_page=True)
+
             browser_logger.error(
                 f"A error was occured while creating media post for account {self.account.id}!\n" + traceback.format_exc()
             )
@@ -689,6 +717,13 @@ class Session:
             
             items = await like_locator.all()
         except Exception:
+            os.makedirs("screenshots", exist_ok=True)
+
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            path = f"screenshots/error_{timestamp}.png"
+
+            await page.screenshot(path=path, full_page=True)
+
             browser_logger.error(
                 f"A error was occured while fetching stats for account {self.account.id}!\n" + traceback.format_exc()
             )
