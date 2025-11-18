@@ -98,7 +98,7 @@ async def delete_account_handler(callback: types.CallbackQuery, state: FSMContex
 
         if account:
             await session.delete(account)
-            bot_logger(
+            bot_logger.info(
                 f"User {callback.from_user.id} has just deleted account {account.id}!"
             )
             await session.commit()
