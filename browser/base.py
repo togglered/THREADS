@@ -487,7 +487,7 @@ class Session:
             )
             while self.stop_work_event and not self.stop_work_event.is_set():
                 await page.goto("https://www.threads.net/", wait_until="domcontentloaded", timeout=60000)
-                await asyncio.sleep(10)
+                await asyncio.sleep(15)
 
                 like_btns_locator = page.locator(BrowserConstants.like_btn_selector.value)
                 comment_btns_locator = page.locator(BrowserConstants.leave_comment_btn.value)
@@ -503,52 +503,63 @@ class Session:
                             await like_btn.click()
                             await asyncio.sleep(15)
                         if get_chance(self.account.comment_chance):
-                            # leave a comment
-                            await comment_btn.click()
-                            await page.wait_for_selector('div[role="dialog"]', timeout=15000)
+                            try:
+                                # leave a comment
+                                await comment_btn.click()
+                                await page.wait_for_selector('div[role="dialog"]', timeout=15000)
 
-                            comment_input = page.locator(
-                                'div[role="dialog"] div[data-lexical-editor="true"]'
-                            ).first
+                                comment_input = page.locator(
+                                    'div[role="dialog"] div[data-lexical-editor="true"]'
+                                ).first
 
-                            if not await comment_input.count():
-                                continue
+                                if not await comment_input.count():
+                                    continue
 
-                            post_text_locator = await page.locator(
-                                'div[role="dialog"] span[dir="auto"] > span'
-                            ).all()
+                                post_text_locator = await page.locator(
+                                    'div[role="dialog"] span[dir="auto"] > span'
+                                ).all()
 
-                            pictures = await page.locator(
-                                'div[role="dialog"] picture img'
-                            ).all()
+                                pictures = await page.locator(
+                                    'div[role="dialog"] picture img'
+                                ).all()
 
-                            image_urls = []
-                            for picture in pictures:
-                                src = await picture.get_attribute("src")
-                                if src:
-                                    image_urls.append(src)
+                                image_urls = []
+                                for picture in pictures:
+                                    src = await picture.get_attribute("src")
+                                    if src:
+                                        image_urls.append(src)
 
-                            block = post_text_locator[1]
+                                block = post_text_locator[1]
 
-                            post_text = await block.text_content()
+                                post_text = await block.text_content()
 
-                            comment_text = await AiManager.request_ai(
-                                promt=self.account.persona.comment_prompt,
-                                post_text=post_text,
-                                image_paths=image_urls
-                            )
+                                comment_text = await AiManager.request_ai(
+                                    promt=self.account.persona.comment_prompt,
+                                    post_text=post_text,
+                                    image_paths=image_urls
+                                )
 
-                            await comment_input.fill(comment_text[:500])
-                            
-                            final_post_button = page.locator(
-                                'div[role="dialog"] div[aria-hidden="false"] div div div div div div[role="button"][tabindex="0"] div'
-                            )
-                            
-                            final_post_button = (await final_post_button.all())[8]
+                                await comment_input.fill(comment_text[:500])
+                                
+                                final_post_button = page.locator(
+                                    'div[role="dialog"] div[aria-hidden="false"] div div div div div div[role="button"][tabindex="0"] div'
+                                )
+                                
+                                final_post_button = (await final_post_button.all())[8]
 
-                            await final_post_button.click()
+                                await final_post_button.click()
 
-                            await asyncio.sleep(random.uniform(5, 8))
+                                await asyncio.sleep(random.uniform(5, 8))
+                            except Exception:
+                                os.makedirs("screenshots", exist_ok=True)
+
+                                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                                path = f"screenshots/error_{timestamp}.png"
+
+                                await page.screenshot(path=path, full_page=True)
+                                browser_logger.error(
+                                    f"A error was occured while leaving a comment for account {self.account.id}!\n" + traceback.format_exc()
+                                )
                         
                     await asyncio.sleep(self.account.scroll_feed_delay)
         except Exception:
