@@ -506,7 +506,7 @@ class Session:
                             try:
                                 # leave a comment
                                 await comment_btn.click()
-                                await page.wait_for_selector('div[role="dialog"]', timeout=15000)
+                                await page.wait_for_selector('div[role="dialog"]', timeout=15000, state="visible")
 
                                 comment_input = page.locator(
                                     'div[role="dialog"] div[data-lexical-editor="true"]'
