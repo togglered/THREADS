@@ -340,8 +340,8 @@ class Session:
                     for media in account.medias:
                         if media.filepath == photo.filepath:
                             await session.delete(media)
-                            await ThreadsManager.refresh_account_data(account.id)
                             await session.commit()
+                            await ThreadsManager.refresh_account_data(self.account.id)
                     browser_logger.info(
                         f"Account {self.account.id} has just posted a media post!"
                     )
