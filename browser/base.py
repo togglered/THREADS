@@ -506,7 +506,17 @@ class Session:
                             try:
                                 # leave a comment
                                 await comment_btn.click()
-                                await page.wait_for_selector('div[role="dialog"]', timeout=15000, state="visible")
+                                try:
+                                    await page.wait_for_selector('div[role="dialog"]', timeout=8000, state="visible")
+                                except _errors.TimeoutError:
+                                    try:
+                                        big_window_btn = page.locator(
+                                            'path[d="M20.714 3.3A.996.996 0 0 1 21 4v5a1 1 0 1 1-2 0V6.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L17.586 5H15a1 1 0 1 1 0-2h5a.997.997 0 0 1 .714.3zM4 21a.998.998 0 0 1-1-.985V15a1 1 0 1 1 2 0v2.586l4.293-4.293a1 1 0 0 1 1.414 1.414L6.414 19H9a1 1 0 1 1 0 2H4z"]'
+                                        ).first
+                                        await big_window_btn.click()
+                                        await page.wait_for_selector('div[role="dialog"]', timeout=15000, state="visible")
+                                    except Exception as e:
+                                        print(e, traceback.format_exc())
 
                                 comment_input = page.locator(
                                     'div[role="dialog"] div[data-lexical-editor="true"]'
@@ -547,7 +557,7 @@ class Session:
                                 
                                 final_post_button = (await final_post_button.all())[8]
 
-                                await final_post_button.click()
+                                # await final_post_button.click()
 
                                 await asyncio.sleep(random.uniform(5, 8))
                             except Exception:
@@ -812,7 +822,7 @@ class ThreadsManager:
         )
 
     @classmethod
-    async def create_session(cls, account: Account, configure_scheduler: bool = True):
+    async def create_session(cls, account: Account, configure_scheduler: bool = True) -> Session | None:
         """
             Создание сессии.
         """

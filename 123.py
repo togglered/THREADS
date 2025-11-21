@@ -1,8 +1,7 @@
 from dotenv import load_dotenv
-import asyncio
-
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+import asyncio
 
 load_dotenv()
 
@@ -14,12 +13,11 @@ from browser.base import ThreadsManager
 async def main():
     await create_columns()
     await ThreadsManager.start_browser()
-    # await ThreadsManager.start_scheduler()
 
     async with async_session() as session:
         account = await session.scalar(
             select(Account)
-            .where(Account.id == 2)
+            .where(Account.id == 1)
             .options(
                 selectinload(Account.persona),
                 selectinload(Account.owner),
@@ -31,8 +29,11 @@ async def main():
             session = await ThreadsManager.create_session(
                 account=account,
             )
-            await asyncio.Future()
-            
+            session.stop_work_event = asyncio.Event()
+            session.working_task = asyncio.create_task(
+                session._scroll_feeds()
+            )
+            await asyncio.Future() 
 
 
 if __name__ == "__main__":
